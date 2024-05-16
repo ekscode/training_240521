@@ -1,0 +1,83 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_Contactor" Id="{c9a5bb48-7b03-45bc-a46a-cd9e2ad6b700}" SpecialFunc="None">
+    <Declaration><![CDATA[(* 	Disclaimer
+	All sample code provided by Beckhoff Automation LLC are for illustrative purposes only and are provided “as is” and without any warranties, express or implied.
+	Actual implementations in applications will vary significantly.
+	Beckhoff Automation LLC shall have no liability for, and does not waive any rights in relation to, any code samples that it provides or the use of such code samples for any purpose.
+*)
+FUNCTION_BLOCK FB_Contactor
+VAR_INPUT
+	Activate: BOOL;
+	Deactivate: BOOL;
+	EDM: BOOL;
+	ErrAck: BOOL;
+	TimeOn: TIME := T#3S;
+	TimeOff: TIME := T#3S;
+END_VAR
+VAR_OUTPUT
+	Output: BOOL;
+	Busy: BOOL;
+	Error: BOOL;
+END_VAR
+VAR
+	eState :(eInit, eIdle, eActivate, eDeactivate, eError);
+	tonWD: TON;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Activating Watchdog
+tonWD.IN := Output XOR EDM;
+tonWD.PT := TimeOn;
+IF tonWD.Q THEN
+	Error := TRUE;
+END_IF
+
+// State Machine
+CASE eState OF
+	eInit:
+		Output := FALSE;
+		Busy := FALSE;
+		Error := FALSE;
+		eState := eIdle;
+	
+	eIdle:
+		Busy := FALSE;
+		IF Activate AND NOT Output THEN
+			eState := eActivate;
+		ELSIF NOT Activate AND Output THEN
+			eState := eDeactivate;
+		END_IF
+		
+	eActivate:
+		Busy := TRUE;
+		Output := TRUE;
+		IF NOT Activate OR EDM THEN
+			eState := eIdle;
+		END_IF
+	
+	eDeactivate:
+		Busy := TRUE;
+		Output := FALSE;
+		IF Activate OR NOT EDM THEN
+			eState := eIdle;
+		END_IF	
+		
+	eError:
+		IF ErrAck THEN
+			eState := eInit;
+		END_IF
+	
+END_CASE
+
+// Call function blocks
+tonWD();]]></ST>
+    </Implementation>
+    <LineIds Name="FB_Contactor">
+      <LineId Id="21" Count="4" />
+      <LineId Id="27" Count="0" />
+      <LineId Id="36" Count="6" />
+      <LineId Id="44" Count="32" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

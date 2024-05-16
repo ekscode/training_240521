@@ -1,0 +1,14 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <GVL Name="gHMI" Id="{fc4c07f8-6b9d-4642-a312-b22b865d6b70}">
+    <Declaration><![CDATA[{attribute 'qualified_only'}
+VAR_GLOBAL
+	Start: BOOL;
+	Stop: BOOL;
+	Reset: BOOL;
+	Run: BOOL;
+	Alarm: BOOL;
+	Error: BOOL;	
+END_VAR]]></Declaration>
+  </GVL>
+</TcPlcObject>

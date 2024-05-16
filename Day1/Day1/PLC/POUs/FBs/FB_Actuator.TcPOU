@@ -1,0 +1,134 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_Actuator" Id="{a96b305c-5f90-49ef-90b2-631d225a4db4}" SpecialFunc="None">
+    <Declaration><![CDATA[(* 	Disclaimer
+	All sample code provided by Beckhoff Automation LLC are for illustrative purposes only and are provided “as is” and without any warranties, express or implied.
+	Actual implementations in applications will vary significantly.
+	Beckhoff Automation LLC shall have no liability for, and does not waive any rights in relation to, any code samples that it provides or the use of such code samples for any purpose.
+*)
+FUNCTION_BLOCK FB_Actuator
+VAR_INPUT
+	Activate: BOOL;
+	Deactivate: BOOL;
+	EDM_Activated: BOOL;
+	EDM_Deactivated: BOOL;
+	ErrAck: BOOL;
+	TimeOn: TIME := T#2S;
+	TimeOff: TIME := T#2S;
+END_VAR
+VAR_OUTPUT
+	Activated: BOOL;
+	Busy: BOOL;
+	Error: BOOL;
+	ErrorId: UDINT;
+END_VAR
+VAR
+	eState :(eInit, eIdle, eActivate, eDeactivate, eError);
+	tonWD_On: TON;
+	tonWD_Off: TON;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Activating Watchdog
+tonWD_On.IN := Activated AND NOT EDM_Activated;
+tonWD_On.PT := TimeOn;
+IF tonWD_On.Q THEN
+	Error := TRUE;
+	ErrorId := 1;
+END_IF
+
+// Deactivating Watchdog
+tonWD_Off.IN := NOT Activated AND NOT EDM_Deactivated;
+tonWD_Off.PT := TimeOff;
+IF tonWD_Off.Q THEN
+	Error := TRUE;
+	ErrorId := 2;
+END_IF
+
+// State Machine
+CASE eState OF
+	eInit:
+		Activated := FALSE;
+		Busy := FALSE;
+		Error := FALSE;
+		ErrorId := 0;
+		eState := eIdle;
+	
+	eIdle:
+		Busy := FALSE;
+		IF NOT Activated AND Activate THEN
+			eState := eActivate;
+		ELSIF Activated AND Deactivate THEN
+			eState := eDeactivate;
+		END_IF
+		
+	eActivate:
+		Busy := TRUE;
+		Activated := TRUE;
+		IF NOT Activate OR EDM_Activated THEN
+			eState := eIdle;
+		END_IF
+	
+	eDeactivate:
+		Busy := TRUE;
+		Activated := FALSE;
+		IF Activate OR EDM_Deactivated THEN
+			eState := eIdle;
+		END_IF	
+		
+	eError:
+		IF ErrAck THEN
+			eState := eInit;
+		END_IF
+	
+END_CASE
+
+// Call function blocks
+tonWD_On();
+tonWD_Off();]]></ST>
+    </Implementation>
+    <LineIds Name="FB_Actuator">
+      <LineId Id="82" Count="0" />
+      <LineId Id="72" Count="0" />
+      <LineId Id="83" Count="0" />
+      <LineId Id="59" Count="0" />
+      <LineId Id="73" Count="0" />
+      <LineId Id="84" Count="0" />
+      <LineId Id="74" Count="0" />
+      <LineId Id="86" Count="6" />
+      <LineId Id="85" Count="0" />
+      <LineId Id="22" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="23" Count="1" />
+      <LineId Id="26" Count="0" />
+      <LineId Id="39" Count="1" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="54" Count="0" />
+      <LineId Id="47" Count="0" />
+      <LineId Id="55" Count="0" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="56" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="62" Count="0" />
+      <LineId Id="61" Count="0" />
+      <LineId Id="65" Count="0" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="67" Count="1" />
+      <LineId Id="99" Count="0" />
+      <LineId Id="70" Count="0" />
+      <LineId Id="51" Count="1" />
+      <LineId Id="101" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="102" Count="1" />
+      <LineId Id="93" Count="1" />
+      <LineId Id="31" Count="0" />
+      <LineId Id="95" Count="2" />
+      <LineId Id="32" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="34" Count="2" />
+      <LineId Id="33" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>

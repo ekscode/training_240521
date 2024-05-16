@@ -1,0 +1,157 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<TcPlcObject Version="1.1.0.1" ProductVersion="3.1.4024.12">
+  <POU Name="FB_StartingAlarm" Id="{81e684f9-9e22-43ae-a22b-886186db1292}" SpecialFunc="None">
+    <Declaration><![CDATA[FUNCTION_BLOCK FB_StartingAlarm
+VAR_INPUT
+	Start: BOOL;
+	Stop: BOOL;
+	AlarmOn: TIME := T#500MS;
+	AlarmOff: TIME := T#500MS;
+	AlarmCount: UINT := 3;
+END_VAR
+VAR_OUTPUT
+	Run: BOOL;
+	Busy: BOOL;
+	StartAlarm: BOOL;
+END_VAR
+VAR
+	eState: (eInit, eIdle, eStarting, eRunning);
+	eAlarmState: (eAlarmInit, eAlarmOn, eAlarmOff, eAlarmDone);
+	rtrigStart: R_TRIG;
+	rtrigStop: R_TRIG;
+	tonAlarmOn: TON;
+	tonAlarmOff: TON;
+	nAlarmCount: UINT;
+END_VAR
+]]></Declaration>
+    <Implementation>
+      <ST><![CDATA[// Triggers
+rtrigStop(CLK := Stop);
+
+// Stop Interrrupt
+IF rtrigStop.Q THEN
+	eState := eInit;
+END_IF
+
+// State Machine
+CASE eState OF
+	eInit:
+		Run := FALSE;
+		Busy := FALSE;
+		StartAlarm := FALSE;
+		eAlarmState := eAlarmInit;	
+		eState := eIdle;
+		
+	eIdle:
+		IF Start THEN
+			eState := eStarting;
+		END_IF
+		
+	eStarting:
+		Busy := TRUE;
+		
+		// Abort if Start not Held
+		IF NOT Start THEN
+			eState := eInit;
+		END_IF
+		
+		// Alarm Sequence
+		CASE eAlarmState OF
+			eAlarmInit:
+				tonAlarmOn.IN := FALSE;
+				tonAlarmOn.PT := AlarmOn;
+				tonAlarmOff.IN := FALSE;
+				tonAlarmOff.PT := AlarmOff;
+				nAlarmCount := 0;
+				eAlarmState := eAlarmOn;
+			eAlarmOn:
+				tonAlarmOn.IN := TRUE;
+				StartAlarm := TRUE;
+				IF tonAlarmOn.Q THEN
+					tonAlarmOn.IN := FALSE;
+					eAlarmState := eAlarmOff;
+				END_IF
+			eAlarmOff:
+				tonAlarmOff.IN := TRUE;
+				StartAlarm := FALSE;
+				IF tonAlarmOff.Q THEN
+					tonAlarmOff.IN := FALSE;
+					nAlarmCount := nAlarmCount + 1;
+					IF nAlarmCount < AlarmCount THEN
+						eAlarmState := eAlarmOn;
+					ELSE
+						eAlarmState := eAlarmDone;
+					END_IF
+				END_IF
+				
+			eAlarmDone:
+				eState := eRunning;
+		END_CASE
+		
+	eRunning:
+		Busy := FALSE;
+		Run := TRUE;	
+END_CASE
+
+// Call Function Blocks
+tonAlarmOn();
+tonAlarmOff();
+
+]]></ST>
+    </Implementation>
+    <LineIds Name="FB_StartingAlarm">
+      <LineId Id="27" Count="0" />
+      <LineId Id="30" Count="0" />
+      <LineId Id="95" Count="4" />
+      <LineId Id="94" Count="0" />
+      <LineId Id="9" Count="0" />
+      <LineId Id="21" Count="1" />
+      <LineId Id="41" Count="2" />
+      <LineId Id="140" Count="0" />
+      <LineId Id="25" Count="0" />
+      <LineId Id="40" Count="0" />
+      <LineId Id="24" Count="0" />
+      <LineId Id="34" Count="2" />
+      <LineId Id="45" Count="0" />
+      <LineId Id="39" Count="0" />
+      <LineId Id="37" Count="0" />
+      <LineId Id="136" Count="0" />
+      <LineId Id="131" Count="0" />
+      <LineId Id="133" Count="2" />
+      <LineId Id="132" Count="0" />
+      <LineId Id="61" Count="2" />
+      <LineId Id="92" Count="0" />
+      <LineId Id="69" Count="0" />
+      <LineId Id="93" Count="0" />
+      <LineId Id="70" Count="0" />
+      <LineId Id="141" Count="0" />
+      <LineId Id="76" Count="0" />
+      <LineId Id="66" Count="0" />
+      <LineId Id="71" Count="2" />
+      <LineId Id="82" Count="0" />
+      <LineId Id="74" Count="1" />
+      <LineId Id="67" Count="0" />
+      <LineId Id="78" Count="2" />
+      <LineId Id="91" Count="0" />
+      <LineId Id="83" Count="1" />
+      <LineId Id="90" Count="0" />
+      <LineId Id="86" Count="0" />
+      <LineId Id="89" Count="0" />
+      <LineId Id="87" Count="0" />
+      <LineId Id="77" Count="0" />
+      <LineId Id="138" Count="0" />
+      <LineId Id="68" Count="0" />
+      <LineId Id="100" Count="0" />
+      <LineId Id="64" Count="0" />
+      <LineId Id="129" Count="0" />
+      <LineId Id="103" Count="1" />
+      <LineId Id="106" Count="0" />
+      <LineId Id="23" Count="0" />
+      <LineId Id="52" Count="0" />
+      <LineId Id="51" Count="0" />
+      <LineId Id="53" Count="1" />
+      <LineId Id="60" Count="0" />
+      <LineId Id="56" Count="0" />
+    </LineIds>
+  </POU>
+</TcPlcObject>
